@@ -1,6 +1,14 @@
 
 #include "surface.h"
 
+using namespace nurbsfit;
+
+FitSurface::~FitSurface()
+{
+  if(m_solver!=NULL)
+    delete m_solver;
+}
+
 void nurbsfit::IncreaseDimension( const ON_NurbsSurface& src, ON_NurbsSurface& dest, int dim )
 {
   dest.m_dim          = dim;

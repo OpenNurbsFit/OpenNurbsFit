@@ -37,13 +37,24 @@
 
 #include "OpenNurbs/opennurbs.h"
 
+#undef Success
+#include <Eigen/SparseQR>
+#include <Eigen/SPQRSupport>
+
 namespace nurbsfit{
 
 class FitSurface
 {
+public:
+  typedef Eigen::SparseMatrix<double> SparseMatrix;
+  typedef Eigen::SPQR<SparseMatrix> SPQR;
 
 protected:
+  bool m_quiet;
   ON_NurbsSurface m_nurbs;
+  Eigen::VectorXd m_b;  // control points
+  SparseMatrix m_K;     // matrix of linear system (containing basis functions of surface)
+  SPQR* m_solver;
 
   // index routines
   int grc2gl (int I, int J)
@@ -65,6 +76,13 @@ protected:
   {
     return (static_cast<int> (A % m_nurbs.CVCount (1)));
   } // global lexicographic in global col index
+
+public:
+  FitSurface() : m_quiet(true), m_solver(NULL) {}
+  ~FitSurface();
+
+  virtual void initSolver(const Eigen::VectorXd& param0, const Eigen::VectorXd& param1, bool anisotropic=false);
+
 };
 
 void IncreaseDimension( const ON_NurbsSurface& src, ON_NurbsSurface& dest, int dim );

@@ -37,9 +37,6 @@
 
 #include "surface.h"
 
-#include <Eigen/SparseQR>
-#include <Eigen/SPQRSupport>
-
 namespace nurbsfit
 {
 
@@ -59,23 +56,11 @@ public:
 protected:
   ROI m_roi;
 
-  typedef Eigen::SparseMatrix<double> SparseMatrix;
-
-  Eigen::VectorXd m_b; // control points
-  SparseMatrix m_K;
-  Eigen::VectorXd m_rs;
-
-  bool m_quiet;
-
-  typedef Eigen::SPQR<SparseMatrix> SPQR;
-  SPQR* m_solver;
-
   bool m_use_indices;
 
   void updateSurf();
 
 public:
-  FitSurfaceDepth() : m_quiet(true), m_solver(NULL) {}
   FitSurfaceDepth(int order,
                       int cps_width, int cps_height,
                       ROI img_roi,

@@ -70,7 +70,6 @@ FitSurfaceDepth::FitSurfaceDepth(int order,
                                          int cps_width, int cps_height,
                                          ROI img_roi,
                                          const Eigen::MatrixXd& points)
-  : m_quiet(true), m_solver(NULL)
 {
   if(points.cols()!=3)
     throw std::runtime_error("[FitSurfaceDepth::FitSurfaceDepth] Error, points must be a matrix Nx3.");
@@ -85,7 +84,6 @@ FitSurfaceDepth::FitSurfaceDepth(int order,
                                          ROI img_roi,
                                          const Eigen::MatrixXd& points,
                                          const std::vector<int>& indices)
-  : m_quiet(true), m_solver(NULL)
 {
   if(points.cols()!=3)
     throw std::runtime_error("[FitSurfaceDepth::FitSurfaceDepth] Error, points must be a matrix Nx3.");
@@ -94,13 +92,6 @@ FitSurfaceDepth::FitSurfaceDepth(int order,
   initSolver(points, indices);
   solve(points.col(2), indices);
 }
-
-FitSurfaceDepth::~FitSurfaceDepth()
-{
-  if(m_solver!=NULL)
-    delete m_solver;
-}
-
 
 void FitSurfaceDepth::initSurface(int order, int cps_width, int cps_height, ROI img_roi)
 {
