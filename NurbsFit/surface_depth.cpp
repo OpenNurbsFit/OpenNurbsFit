@@ -41,8 +41,7 @@
 //#include <glpk.h>
 //#include <gurobi/gurobi_c++.h>
 
-using namespace pcl;
-using namespace on_nurbs;
+using namespace onf;
 
 FittingSurfaceDepth::ROI::ROI(const Eigen::MatrixXd &points)
 {
@@ -239,7 +238,6 @@ void FittingSurfaceDepth::initSolver(const Eigen::MatrixXd &points, const std::v
 
   for(size_t row=0; row<indices.size(); row++)
   {
-    int idx = indices[row];
     const Eigen::Vector3d& p = points.row(indices[row]);
 
     E = ON_NurbsSpanIndex (m_nurbs.m_order[0], m_nurbs.m_cv_count[0], m_nurbs.m_knot[0], p(0), 0, 0);
@@ -354,7 +352,7 @@ Eigen::VectorXd FittingSurfaceDepth::GetError(const Eigen::VectorXd& z, const st
   return e;
 }
 
-void pcl::on_nurbs::IncreaseDimension( const ON_NurbsSurface& src, ON_NurbsSurface& dest, int dim )
+void onf::IncreaseDimension( const ON_NurbsSurface& src, ON_NurbsSurface& dest, int dim )
 {
   dest.m_dim          = dim;
   dest.m_is_rat       = src.m_is_rat;

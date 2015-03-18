@@ -1,9 +1,3 @@
-set(NURBSFIT 1 CACHE BOOL "NURBS fit implementation" )
-IF(NURBSFIT)
-
-set(CMAKE_CXX_FLAGS "-frounding-math")
-	
-
 # find dependent packages
 if(WIN32 AND NOT CYGWIN)
   set(EIGEN3_INCLUDE_DIRS "C:/Eigen/" CACHE PATH "Include directory for Eigen3 library.")
@@ -19,24 +13,23 @@ else()
   message(FATAL_ERROR "Error, suitesparse not found.")
 endif()
 
+# source files
+set(SOURCE_CPP
+    surface_depth.cpp)
 
-	
-	set(SOURCE_CPP
-      surface_depth.cpp)
+set(SOURCE_H
+    surface_depth.h)
 
-	set(SOURCE_H
-      surface_depth.h)
+# build
+add_library(nurbsfit SHARED ${SOURCE_CPP} ${SOURCE_H})
+target_link_libraries(nurbsfit opennurbs)
 
-  add_library(nurbsfit SHARED ${SOURCE_CPP} ${SOURCE_H})
-  target_link_libraries(nurbsfit ${CGAL_LIBRARIES})
+# install
+install(FILES ${SOURCE_H} DESTINATION "${INSTALL_INCLUDE_DIR}/NurbsFit")
+install(TARGETS nurbsfit
+        EXPORT OpenNurbsFitTargets
+        RUNTIME DESTINATION "${INSTALL_BIN_DIR}" COMPONENT bin
+        LIBRARY DESTINATION "${INSTALL_LIB_DIR}" COMPONENT lib
+        PUBLIC_HEADER DESTINATION "${INSTALL_INCLUDE_DIR}/NurbsFit"
+        COMPONENT dev)
 
-  install(FILES ${SOURCE_H} ${SOURCE_H_EXT} DESTINATION "${INSTALL_INCLUDE_DIR}/NurbsFit")
-  install(TARGETS nurbsfit
-          EXPORT OpenNurbsFitTargets
-          RUNTIME DESTINATION "${INSTALL_BIN_DIR}" COMPONENT bin
-          LIBRARY DESTINATION "${INSTALL_LIB_DIR}" COMPONENT lib
-          PUBLIC_HEADER DESTINATION "${INSTALL_INCLUDE_DIR}/NurbsFit"
-          COMPONENT dev)
-
-
-ENDIF(NURBSFIT)

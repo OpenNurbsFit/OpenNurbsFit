@@ -32,17 +32,15 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NURBS_FITTING_SURFACE_DEPTH_H
-#define NURBS_FITTING_SURFACE_DEPTH_H
+#ifndef NURBS_FIT_SURFACE_DEPTH_H
+#define NURBS_FIT_SURFACE_DEPTH_H
 
-#include <opennurbs.h>
+#include <OpenNurbs/opennurbs.h>
 
 #include <Eigen/SparseQR>
 #include <Eigen/SPQRSupport>
 
-namespace pcl
-{
-namespace on_nurbs
+namespace onf
 {
 
 /** \brief Fitting a depth-nurbs to data     */
@@ -134,7 +132,6 @@ public:
 
 void IncreaseDimension( const ON_NurbsSurface& src, ON_NurbsSurface& dest, int dim );
 
-}
 }
 
 #endif

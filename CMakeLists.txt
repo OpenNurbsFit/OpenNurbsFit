@@ -27,9 +27,11 @@ add_definitions("-Wall -Wno-unused-function -fno-strict-aliasing -pthread")
 include_directories(.)
 
 include(suitesparse.cmake)
-include(opennurbs.cmake)
 include(openmp.cmake)
 
+set(LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/lib")
+
+add_subdirectory(OpenNurbs)
 add_subdirectory(NurbsFit)
 #add_subdirectory(apps)
 
@@ -37,7 +39,7 @@ add_subdirectory(NurbsFit)
 # OpenNurbsFitConfig.cmake
 # -----------------------
 # Add all targets to the build-tree export set
-export(TARGETS nurbsfit FILE "${PROJECT_BINARY_DIR}/OpenNurbsFitTargets.cmake")
+export(TARGETS opennurbs nurbsfit FILE "${PROJECT_BINARY_DIR}/OpenNurbsFitTargets.cmake")
  
 # Export the package for use from the build-tree
 # (this registers the build-tree with a global CMake-registry)
@@ -70,7 +72,7 @@ install(EXPORT OpenNurbsFitTargets DESTINATION "${INSTALL_CMAKE_DIR}" COMPONENT 
 # uninstall target
 # ----------------
 configure_file(
-"${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
-"${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
-IMMEDIATE @ONLY)
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+    IMMEDIATE @ONLY)
 add_custom_target(uninstall COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
