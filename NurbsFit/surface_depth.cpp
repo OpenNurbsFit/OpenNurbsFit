@@ -1,7 +1,7 @@
 /*
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2012-, Thomas Mörwald
+ *  Copyright (c) 2015, Thomas Mörwald
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -38,12 +38,9 @@
 #include "surface_depth.h"
 #include <stdexcept>
 
-//#include <glpk.h>
-//#include <gurobi/gurobi_c++.h>
+using namespace nurbsfit;
 
-using namespace onf;
-
-FittingSurfaceDepth::ROI::ROI(const Eigen::MatrixXd &points)
+FitSurfaceDepth::ROI::ROI(const Eigen::MatrixXd &points)
 {
   double x_min(DBL_MAX), x_max(DBL_MIN);
   double y_min(DBL_MAX), y_max(DBL_MIN);
@@ -69,21 +66,21 @@ FittingSurfaceDepth::ROI::ROI(const Eigen::MatrixXd &points)
   height = y_max-y_min;
 }
 
-FittingSurfaceDepth::FittingSurfaceDepth(int order,
+FitSurfaceDepth::FitSurfaceDepth(int order,
                                          int cps_width, int cps_height,
                                          ROI img_roi,
                                          const Eigen::MatrixXd& points)
   : m_quiet(true), m_solver(NULL)
 {
   if(points.cols()!=3)
-    throw std::runtime_error("[FittingSurfaceDepth::FittingSurfaceDepth] Error, points must be a matrix Nx3.");
+    throw std::runtime_error("[FitSurfaceDepth::FitSurfaceDepth] Error, points must be a matrix Nx3.");
 
   initSurface(order, cps_width, cps_height, img_roi);
   initSolver(points);
   solve(points.col(2));
 }
 
-FittingSurfaceDepth::FittingSurfaceDepth(int order,
+FitSurfaceDepth::FitSurfaceDepth(int order,
                                          int cps_width, int cps_height,
                                          ROI img_roi,
                                          const Eigen::MatrixXd& points,
@@ -91,21 +88,21 @@ FittingSurfaceDepth::FittingSurfaceDepth(int order,
   : m_quiet(true), m_solver(NULL)
 {
   if(points.cols()!=3)
-    throw std::runtime_error("[FittingSurfaceDepth::FittingSurfaceDepth] Error, points must be a matrix Nx3.");
+    throw std::runtime_error("[FitSurfaceDepth::FitSurfaceDepth] Error, points must be a matrix Nx3.");
 
   initSurface(order, cps_width, cps_height, img_roi);
   initSolver(points, indices);
   solve(points.col(2), indices);
 }
 
-FittingSurfaceDepth::~FittingSurfaceDepth()
+FitSurfaceDepth::~FitSurfaceDepth()
 {
   if(m_solver!=NULL)
     delete m_solver;
 }
 
 
-void FittingSurfaceDepth::initSurface(int order, int cps_width, int cps_height, ROI img_roi)
+void FitSurfaceDepth::initSurface(int order, int cps_width, int cps_height, ROI img_roi)
 {
   if(cps_width<order)
     cps_width=order;
@@ -142,18 +139,15 @@ void FittingSurfaceDepth::initSurface(int order, int cps_width, int cps_height, 
       m_b(grc2gl(i,j),0) = 0.0;
     }
   }
-
-//    ON_TextLog out;
-//    m_nurbs.Dump (out);
 }
 
-void FittingSurfaceDepth::initSolver(const Eigen::MatrixXd &points)
+void FitSurfaceDepth::initSolver(const Eigen::MatrixXd &points)
 {
   if(points.cols()!=3)
-    throw std::runtime_error("[FittingSurfaceDepth::initSolver] Error, points must be a matrix Nx3.");
+    throw std::runtime_error("[FitSurfaceDepth::initSolver] Error, points must be a matrix Nx3.");
 
   if(m_nurbs.CVCount() <= 0)
-    throw std::runtime_error("[FittingSurfaceDepth::initSolver] Error, surface not initialized (initSurface).");
+    throw std::runtime_error("[FitSurfaceDepth::initSolver] Error, surface not initialized (initSurface).");
 
   m_K = SparseMatrix( points.rows(), m_nurbs.CVCount() );
 
@@ -162,7 +156,7 @@ void FittingSurfaceDepth::initSolver(const Eigen::MatrixXd &points)
   tripletList.resize( points.rows() * m_nurbs.Order(0) * m_nurbs.Order(1) );
 
   if(!m_quiet)
-    printf("[FittingSurfaceDepth::initSolver] entries: %lu  rows: %lu  cols: %d\n",
+    printf("[FitSurfaceDepth::initSolver] entries: %lu  rows: %lu  cols: %d\n",
            points.rows()* m_nurbs.Order(0) * m_nurbs.Order(1),
            points.rows(),
            m_nurbs.CVCount());
@@ -202,22 +196,20 @@ void FittingSurfaceDepth::initSolver(const Eigen::MatrixXd &points)
     m_solver = new SPQR();
   m_solver->compute(m_K);
   if(m_solver->info()!=Eigen::Success)
-    throw std::runtime_error("[FittingSurfaceDepth::initSolver] decomposition failed.");
+    throw std::runtime_error("[FitSurfaceDepth::initSolver] decomposition failed.");
 
   if(!m_quiet)
-    printf("[FittingSurfaceDepth::initSolver] decomposition done\n");
+    printf("[FitSurfaceDepth::initSolver] decomposition done\n");
 
   m_use_indices = false;
 }
 
-void FittingSurfaceDepth::initSolver(const Eigen::MatrixXd &points, const std::vector<int>& indices)
+void FitSurfaceDepth::initSolver(const Eigen::MatrixXd &points, const std::vector<int>& indices)
 {
   if(points.cols()!=3)
-    throw std::runtime_error("[FittingSurfaceDepth::initSolver] Error, points must be a matrix Nx3.");
+    throw std::runtime_error("[FitSurfaceDepth::initSolver] Error, points must be a matrix Nx3.");
   if(m_nurbs.CVCount() <= 0)
-    throw std::runtime_error("[FittingSurfaceDepth::initSolver] Error, surface not initialized (initSurface).");
-
-  //  m_nsolver.assign(m_roi.width*m_roi.height, m_nurbs.CVCount(), 1);
+    throw std::runtime_error("[FitSurfaceDepth::initSolver] Error, surface not initialized (initSurface).");
 
   m_K = SparseMatrix( indices.size(), m_nurbs.CVCount() );
 
@@ -226,7 +218,7 @@ void FittingSurfaceDepth::initSolver(const Eigen::MatrixXd &points, const std::v
   tripletList.resize( indices.size() * m_nurbs.Order(0) * m_nurbs.Order(1) );
 
   if(!m_quiet)
-    printf("[FittingSurfaceDepth::initSolver] entries: %lu  rows: %lu  cols: %d\n",
+    printf("[FitSurfaceDepth::initSolver] entries: %lu  rows: %lu  cols: %d\n",
            indices.size() * m_nurbs.Order(0) * m_nurbs.Order(1),
            indices.size(),
            m_nurbs.CVCount());
@@ -267,26 +259,26 @@ void FittingSurfaceDepth::initSolver(const Eigen::MatrixXd &points, const std::v
     m_solver = new SPQR();
   m_solver->compute(m_K);
   if(m_solver->info()!=Eigen::Success)
-    throw std::runtime_error("[FittingSurfaceDepth::initSolver] decomposition failed.");
+    throw std::runtime_error("[FitSurfaceDepth::initSolver] decomposition failed.");
   if(!m_quiet)
-    printf("[FittingSurfaceDepth::initSolver] decomposition done\n");
+    printf("[FitSurfaceDepth::initSolver] decomposition done\n");
   m_use_indices = true;
 }
 
-void FittingSurfaceDepth::solve(const Eigen::VectorXd &z)
+void FitSurfaceDepth::solve(const Eigen::VectorXd &z)
 {
   if(m_use_indices)
-    throw std::runtime_error("[FittingSurfaceDepth::solve] Error, solver initialized with indices (use solve(Eigen::VectorXd&, const std::vector<int>&) instead.\n");
+    throw std::runtime_error("[FitSurfaceDepth::solve] Error, solver initialized with indices (use solve(Eigen::VectorXd&, const std::vector<int>&) instead.\n");
 
   m_b = m_solver->solve(z);
 
   updateSurf();
 }
 
-void FittingSurfaceDepth::solve(const Eigen::VectorXd &z, const std::vector<int>& indices)
+void FitSurfaceDepth::solve(const Eigen::VectorXd &z, const std::vector<int>& indices)
 {
   if(!m_use_indices)
-    throw std::runtime_error("[FittingSurfaceDepth::solve] Error, solver initialized without indices (use solve(Eigen::VectorXd&) instead.\n");
+    throw std::runtime_error("[FitSurfaceDepth::solve] Error, solver initialized without indices (use solve(Eigen::VectorXd&) instead.\n");
 
   Eigen::VectorXd zn(m_solver->rows(),1);
 
@@ -298,12 +290,12 @@ void FittingSurfaceDepth::solve(const Eigen::VectorXd &z, const std::vector<int>
   updateSurf();
 }
 
-void FittingSurfaceDepth::updateSurf()
+void FitSurfaceDepth::updateSurf()
 {
   int ncp = m_nurbs.CVCount ();
 
   if(m_b.rows()!=ncp)
-    throw std::runtime_error("[FittingSurfaceDepth::updateSurf] Error, number of control points does not match.");
+    throw std::runtime_error("[FitSurfaceDepth::updateSurf] Error, number of control points does not match.");
 
   for (int i = 0; i < ncp; i++)
   {
@@ -317,10 +309,10 @@ void FittingSurfaceDepth::updateSurf()
   }
 }
 
-Eigen::VectorXd FittingSurfaceDepth::GetError(const Eigen::VectorXd& z)
+Eigen::VectorXd FitSurfaceDepth::GetError(const Eigen::VectorXd& z)
 {
   if(m_use_indices)
-    throw std::runtime_error("[FittingSurfaceDepth::GetError] Error, solver initialized with indices (use solve(Eigen::VectorXd&, const std::vector<int>&) instead.\n");
+    throw std::runtime_error("[FitSurfaceDepth::GetError] Error, solver initialized with indices (use solve(Eigen::VectorXd&, const std::vector<int>&) instead.\n");
 
   // compute K*b (i.e. points on surface)
   Eigen::VectorXd s(z.rows(),1);
@@ -333,10 +325,10 @@ Eigen::VectorXd FittingSurfaceDepth::GetError(const Eigen::VectorXd& z)
   return (s-z);
 }
 
-Eigen::VectorXd FittingSurfaceDepth::GetError(const Eigen::VectorXd& z, const std::vector<int>& indices)
+Eigen::VectorXd FitSurfaceDepth::GetError(const Eigen::VectorXd& z, const std::vector<int>& indices)
 {
   if(!m_use_indices)
-    throw std::runtime_error("[FittingSurfaceDepth::GetError] Error, solver initialized without indices (use solve(Eigen::VectorXd&) instead.\n");
+    throw std::runtime_error("[FitSurfaceDepth::GetError] Error, solver initialized without indices (use solve(Eigen::VectorXd&) instead.\n");
 
   // compute K*b (i.e. points on surface)
   Eigen::VectorXd e(indices.size(),1);
@@ -350,55 +342,4 @@ Eigen::VectorXd FittingSurfaceDepth::GetError(const Eigen::VectorXd& z, const st
     e(i) -= z(indices[i]);
 
   return e;
-}
-
-void onf::IncreaseDimension( const ON_NurbsSurface& src, ON_NurbsSurface& dest, int dim )
-{
-  dest.m_dim          = dim;
-  dest.m_is_rat       = src.m_is_rat;
-  dest.m_order[0]     = src.m_order[0];
-  dest.m_order[1]     = src.m_order[1];
-  dest.m_cv_count[0]  = src.m_cv_count[0];
-  dest.m_cv_count[1]  = src.m_cv_count[1];
-  dest.m_cv_stride[1] = dest.m_is_rat ? dest.m_dim+1 : dest.m_dim;
-  dest.m_cv_stride[0] = dest.m_cv_count[1]*dest.m_cv_stride[1];
-  if ( src.m_knot[0] )
-  {
-    // copy knot array
-    dest.ReserveKnotCapacity( 0, dest.KnotCount(0) );
-    memcpy( dest.m_knot[0], src.m_knot[0], dest.KnotCount(0)*sizeof(*dest.m_knot[0]) );
-  }
-  if ( src.m_knot[1] )
-  {
-    // copy knot array
-    dest.ReserveKnotCapacity( 1, dest.KnotCount(1) );
-    memcpy( dest.m_knot[1], src.m_knot[1], dest.KnotCount(1)*sizeof(*dest.m_knot[1]) );
-  }
-  if ( src.m_cv )
-  {
-    // copy cv array
-    dest.ReserveCVCapacity( dest.m_cv_count[0]*dest.m_cv_count[1]*dest.m_cv_stride[1] );
-    const int dst_cv_size = dest.CVSize()*sizeof(*dest.m_cv);
-    const int src_stride[2] = {src.m_cv_stride[0],src.m_cv_stride[1]};
-    if ( src_stride[0] == dest.m_cv_stride[0] && src_stride[1] == dest.m_cv_stride[1] )
-    {
-      memcpy( dest.m_cv, src.m_cv, dest.m_cv_count[0]*dest.m_cv_count[1]*dest.m_cv_stride[1]*sizeof(*dest.m_cv) );
-    }
-    else
-    {
-      const double *src_cv;
-      double *dst_cv = dest.m_cv;
-      int i, j;
-      for ( i = 0; i < dest.m_cv_count[0]; i++ )
-      {
-        src_cv = src.CV(i,0);
-        for ( j = 0; j < dest.m_cv_count[1]; j++ )
-        {
-          memcpy( dst_cv, src_cv, dst_cv_size );
-          dst_cv += dest.m_cv_stride[1];
-          src_cv += src_stride[1];
-        }
-      }
-    }
-  }
 }

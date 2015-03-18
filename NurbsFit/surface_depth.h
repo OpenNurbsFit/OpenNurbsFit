@@ -1,7 +1,7 @@
 /*
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2012-, Thomas Mörwald
+ *  Copyright (c) 2015, Thomas Mörwald
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -35,16 +35,16 @@
 #ifndef NURBS_FIT_SURFACE_DEPTH_H
 #define NURBS_FIT_SURFACE_DEPTH_H
 
-#include <OpenNurbs/opennurbs.h>
+#include "surface.h"
 
 #include <Eigen/SparseQR>
 #include <Eigen/SPQRSupport>
 
-namespace onf
+namespace nurbsfit
 {
 
-/** \brief Fitting a depth-nurbs to data     */
-class FittingSurfaceDepth
+/** \brief Fitting a 1D NurbsSurface to 1D-data */
+class FitSurfaceDepth : public FitSurface
 {
 public:
 
@@ -57,11 +57,11 @@ public:
   };
 
 protected:
-  Eigen::VectorXd m_b; // control points
-  ON_NurbsSurface m_nurbs;
   ROI m_roi;
 
   typedef Eigen::SparseMatrix<double> SparseMatrix;
+
+  Eigen::VectorXd m_b; // control points
   SparseMatrix m_K;
   Eigen::VectorXd m_rs;
 
@@ -75,17 +75,17 @@ protected:
   void updateSurf();
 
 public:
-  FittingSurfaceDepth() : m_quiet(true), m_solver(NULL) {}
-  FittingSurfaceDepth(int order,
+  FitSurfaceDepth() : m_quiet(true), m_solver(NULL) {}
+  FitSurfaceDepth(int order,
                       int cps_width, int cps_height,
                       ROI img_roi,
                       const Eigen::MatrixXd& points);
-  FittingSurfaceDepth(int order,
+  FitSurfaceDepth(int order,
                       int cps_width, int cps_height,
                       ROI img_roi,
                       const Eigen::MatrixXd& points,
                       const std::vector<int>& indices);
-  virtual ~FittingSurfaceDepth();
+  virtual ~FitSurfaceDepth();
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -105,32 +105,7 @@ public:
   Eigen::VectorXd GetError(const Eigen::VectorXd& z);
   Eigen::VectorXd GetError(const Eigen::VectorXd& z, const std::vector<int>& indices);
 
-
-
-  // index routines
-  int grc2gl (int I, int J)
-  {
-    return m_nurbs.CVCount (1) * I + J;
-  } // global row/col index to global lexicographic index
-
-  int lrc2gl (int E, int F, int i, int j)
-  {
-    return grc2gl (E + i, F + j);
-  } // local row/col index to global lexicographic index
-
-  int gl2gr (int A)
-  {
-    return (static_cast<int> (A / m_nurbs.CVCount (1)));
-  } // global lexicographic in global row index
-
-  int gl2gc (int A)
-  {
-    return (static_cast<int> (A % m_nurbs.CVCount (1)));
-  } // global lexicographic in global col index
-
 };
-
-void IncreaseDimension( const ON_NurbsSurface& src, ON_NurbsSurface& dest, int dim );
 
 }
 

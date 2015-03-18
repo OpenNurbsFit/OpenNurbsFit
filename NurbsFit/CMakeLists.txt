@@ -15,9 +15,11 @@ endif()
 
 # source files
 set(SOURCE_CPP
+    surface.cpp
     surface_depth.cpp)
 
 set(SOURCE_H
+    surface.h
     surface_depth.h)
 
 # build
