@@ -13,6 +13,7 @@ Dependencies:
   Required:
   	- openNURBS SDK 5.0: Rhinoceros 3D openNURBS Initiative (www.rhino3d.com/opennurbs) 
   	- Eigen 3.2.0: Template library for linear algebra (libeigen3-dev)
+    - SuiteSparse
   Optional:
     - OpenMP: Open Multi-Processing library (www.openmp.com)
     - TomGine 4.1: Visualization and rendering engine (http://users.acin.tuwien.ac.at/tmoerwald/?site=4)
