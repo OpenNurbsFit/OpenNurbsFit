@@ -49,6 +49,20 @@ public:
   typedef Eigen::SparseMatrix<double> SparseMatrix;
   typedef Eigen::SPQR<SparseMatrix> SPQR;
 
+  struct Domain
+  {
+    double x, y;
+    double width, height;
+    double border_offset;
+
+    Domain() : x(0), y(0), width(1), height(1), border_offset(0) {}
+
+    Domain(double _x, double _y, double _w, double _h, double _b=0.0)
+      : x(_x), y(_y), width(_w), height(_h), border_offset(_b) {}
+
+    Domain(const Eigen::VectorXd &param0, const Eigen::VectorXd &param1);
+  };
+
 protected:
   bool m_quiet;
   ON_NurbsSurface m_nurbs;
@@ -57,22 +71,22 @@ protected:
   SPQR* m_solver;
 
   // index routines
-  int grc2gl (int I, int J)
+  int grc2gl (int I, int J) const
   {
     return m_nurbs.CVCount (1) * I + J;
   } // global row/col index to global lexicographic index
 
-  int lrc2gl (int E, int F, int i, int j)
+  int lrc2gl (int E, int F, int i, int j) const
   {
     return grc2gl (E + i, F + j);
   } // local row/col index to global lexicographic index
 
-  int gl2gr (int A)
+  int gl2gr (int A) const
   {
     return (static_cast<int> (A / m_nurbs.CVCount (1)));
   } // global lexicographic in global row index
 
-  int gl2gc (int A)
+  int gl2gc (int A) const
   {
     return (static_cast<int> (A % m_nurbs.CVCount (1)));
   } // global lexicographic in global col index
@@ -81,7 +95,7 @@ public:
   FitSurface() : m_quiet(true), m_solver(NULL) {}
   ~FitSurface();
 
-  virtual void initSolver(const Eigen::VectorXd& param0, const Eigen::VectorXd& param1, bool anisotropic=false);
+  inline const ON_NurbsSurface& getSurface() const { return m_nurbs; }
 
 };
 

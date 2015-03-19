@@ -40,71 +40,45 @@
 
 using namespace nurbsfit;
 
-FitSurfaceDepth::ROI::ROI(const Eigen::MatrixXd &points)
-{
-  double x_min(DBL_MAX), x_max(DBL_MIN);
-  double y_min(DBL_MAX), y_max(DBL_MIN);
-
-  for(Eigen::MatrixXd::Index i=0; i<points.rows(); i++)
-  {
-    const Eigen::Vector3d& p = points.row(i);
-
-    if(p(0)<x_min)
-      x_min=p(0);
-    if(p(0)>x_max)
-      x_max=p(0);
-
-    if(p(1)<y_min)
-      y_min=p(1);
-    if(p(1)>y_max)
-      y_max=p(1);
-  }
-
-  x = x_min;
-  y = y_min;
-  width = x_max-x_min;
-  height = y_max-y_min;
-}
-
-FitSurfaceDepth::FitSurfaceDepth(int order,
-                                         int cps_width, int cps_height,
-                                         ROI img_roi,
-                                         const Eigen::MatrixXd& points)
+FitSurfaceDepth::FitSurfaceDepth(int order0, int order1,
+                                 int cps0, int cps1,
+                                 Domain roi,
+                                 const Eigen::MatrixXd& points)
 {
   if(points.cols()!=3)
     throw std::runtime_error("[FitSurfaceDepth::FitSurfaceDepth] Error, points must be a matrix Nx3.");
 
-  initSurface(order, cps_width, cps_height, img_roi);
-  initSolver(points);
+  initSurface(order0, order1, cps0, cps1, roi);
+  initSolver(points.col(0), points.col(1));
   solve(points.col(2));
 }
 
-FitSurfaceDepth::FitSurfaceDepth(int order,
-                                         int cps_width, int cps_height,
-                                         ROI img_roi,
-                                         const Eigen::MatrixXd& points,
-                                         const std::vector<int>& indices)
+FitSurfaceDepth::FitSurfaceDepth(int order0, int order1,
+                                 int cps0, int cps1,
+                                 Domain roi,
+                                 const Eigen::MatrixXd& points,
+                                 const std::vector<int>& indices)
 {
   if(points.cols()!=3)
     throw std::runtime_error("[FitSurfaceDepth::FitSurfaceDepth] Error, points must be a matrix Nx3.");
 
-  initSurface(order, cps_width, cps_height, img_roi);
-  initSolver(points, indices);
+  initSurface(order0, order1, cps0, cps1, roi);
+  initSolver(points.col(0), points.col(1), indices);
   solve(points.col(2), indices);
 }
 
-void FitSurfaceDepth::initSurface(int order, int cps_width, int cps_height, ROI img_roi)
+void FitSurfaceDepth::initSurface(int order0, int order1, int cps0, int cps1, Domain roi)
 {
-  if(cps_width<order)
-    cps_width=order;
-  if(cps_height<order)
-    cps_height=order;
+  if( cps0 < order0 )
+    cps0 = order0;
 
-  m_roi = img_roi;
-  m_nurbs = ON_NurbsSurface (1, false, order, order, cps_width, cps_height);
+  if( cps1 < order1 )
+    cps1 = order1;
 
-  double ddx = m_roi.width  / (m_nurbs.KnotCount(0) - 2*(order-2) - 1);
-  double ddy = m_roi.height / (m_nurbs.KnotCount(1) - 2*(order-2) - 1);
+  m_nurbs = ON_NurbsSurface (1, false, order0, order1, cps0, cps1);
+
+  double ddx = roi.width  / (m_nurbs.KnotCount(0) - 2*(order0-2) - 1);
+  double ddy = roi.height / (m_nurbs.KnotCount(1) - 2*(order1-2) - 1);
 
   m_nurbs.MakeClampedUniformKnotVector (0, ddx);
   m_nurbs.MakeClampedUniformKnotVector (1, ddy);
@@ -112,13 +86,13 @@ void FitSurfaceDepth::initSurface(int order, int cps_width, int cps_height, ROI 
   for (int i = 0; i < m_nurbs.KnotCount(0); i++)
   {
     double k = m_nurbs.Knot (0, i);
-    m_nurbs.SetKnot (0, i, k + m_roi.x);
+    m_nurbs.SetKnot (0, i, k + roi.x);
   }
 
   for (int i = 0; i < m_nurbs.KnotCount(1); i++)
   {
     double k = m_nurbs.Knot (1, i);
-    m_nurbs.SetKnot (1, i, k + m_roi.y);
+    m_nurbs.SetKnot (1, i, k + roi.y);
   }
 
   m_b = Eigen::VectorXd(m_nurbs.CVCount(),1);
@@ -132,24 +106,25 @@ void FitSurfaceDepth::initSurface(int order, int cps_width, int cps_height, ROI 
   }
 }
 
-void FitSurfaceDepth::initSolver(const Eigen::MatrixXd &points)
+void FitSurfaceDepth::initSolver(const Eigen::VectorXd& param0,
+                                 const Eigen::VectorXd& param1)
 {
-  if(points.cols()!=3)
-    throw std::runtime_error("[FitSurfaceDepth::initSolver] Error, points must be a matrix Nx3.");
+  if(param0.rows()!=param1.rows())
+    throw std::runtime_error("[FitSurfaceDepth::initSolver] Error, param vectors must be of same length.");
 
   if(m_nurbs.CVCount() <= 0)
     throw std::runtime_error("[FitSurfaceDepth::initSolver] Error, surface not initialized (initSurface).");
 
-  m_K = SparseMatrix( points.rows(), m_nurbs.CVCount() );
+  m_K = SparseMatrix( param0.rows(), m_nurbs.CVCount() );
 
   typedef Eigen::Triplet<double> Tri;
   std::vector<Tri> tripletList;
-  tripletList.resize( points.rows() * m_nurbs.Order(0) * m_nurbs.Order(1) );
+  tripletList.resize( param0.rows() * m_nurbs.Order(0) * m_nurbs.Order(1) );
 
   if(!m_quiet)
     printf("[FitSurfaceDepth::initSolver] entries: %lu  rows: %lu  cols: %d\n",
-           points.rows()* m_nurbs.Order(0) * m_nurbs.Order(1),
-           points.rows(),
+           param0.rows()* m_nurbs.Order(0) * m_nurbs.Order(1),
+           param0.rows(),
            m_nurbs.CVCount());
 
   double *N0 = new double[m_nurbs.Order (0) * m_nurbs.Order (0)];
@@ -157,15 +132,13 @@ void FitSurfaceDepth::initSolver(const Eigen::MatrixXd &points)
   int E,F;
   int ti(0);
 
-  for(Eigen::MatrixXd::Index row=0; row<points.rows(); row++)
+  for(Eigen::MatrixXd::Index row=0; row<param0.rows(); row++)
   {
-    const Eigen::Vector3d& p = points.row(row);
+    E = ON_NurbsSpanIndex (m_nurbs.m_order[0], m_nurbs.m_cv_count[0], m_nurbs.m_knot[0], param0(row), 0, 0);
+    F = ON_NurbsSpanIndex (m_nurbs.m_order[1], m_nurbs.m_cv_count[1], m_nurbs.m_knot[1], param1(row), 0, 0);
 
-    E = ON_NurbsSpanIndex (m_nurbs.m_order[0], m_nurbs.m_cv_count[0], m_nurbs.m_knot[0], p(0), 0, 0);
-    F = ON_NurbsSpanIndex (m_nurbs.m_order[1], m_nurbs.m_cv_count[1], m_nurbs.m_knot[1], p(1), 0, 0);
-
-    ON_EvaluateNurbsBasis (m_nurbs.Order (0), m_nurbs.m_knot[0] + E, p(0), N0);
-    ON_EvaluateNurbsBasis (m_nurbs.Order (1), m_nurbs.m_knot[1] + F, p(1), N1);
+    ON_EvaluateNurbsBasis (m_nurbs.Order (0), m_nurbs.m_knot[0] + E, param0(row), N0);
+    ON_EvaluateNurbsBasis (m_nurbs.Order (1), m_nurbs.m_knot[1] + F, param1(row), N1);
 
     for (int i = 0; i < m_nurbs.Order (0); i++)
     {
@@ -195,10 +168,13 @@ void FitSurfaceDepth::initSolver(const Eigen::MatrixXd &points)
   m_use_indices = false;
 }
 
-void FitSurfaceDepth::initSolver(const Eigen::MatrixXd &points, const std::vector<int>& indices)
+void FitSurfaceDepth::initSolver(const Eigen::VectorXd& param0,
+                                 const Eigen::VectorXd& param1,
+                                 const std::vector<int>& indices)
 {
-  if(points.cols()!=3)
-    throw std::runtime_error("[FitSurfaceDepth::initSolver] Error, points must be a matrix Nx3.");
+  if(param0.rows()!=param1.rows())
+    throw std::runtime_error("[FitSurfaceDepth::initSolver] Error, param vectors must be of same length.");
+
   if(m_nurbs.CVCount() <= 0)
     throw std::runtime_error("[FitSurfaceDepth::initSolver] Error, surface not initialized (initSurface).");
 
@@ -221,13 +197,14 @@ void FitSurfaceDepth::initSolver(const Eigen::MatrixXd &points, const std::vecto
 
   for(size_t row=0; row<indices.size(); row++)
   {
-    const Eigen::Vector3d& p = points.row(indices[row]);
+    const double& p0 = param0(indices[row]);
+    const double& p1 = param1(indices[row]);
 
-    E = ON_NurbsSpanIndex (m_nurbs.m_order[0], m_nurbs.m_cv_count[0], m_nurbs.m_knot[0], p(0), 0, 0);
-    F = ON_NurbsSpanIndex (m_nurbs.m_order[1], m_nurbs.m_cv_count[1], m_nurbs.m_knot[1], p(1), 0, 0);
+    E = ON_NurbsSpanIndex (m_nurbs.m_order[0], m_nurbs.m_cv_count[0], m_nurbs.m_knot[0], p0, 0, 0);
+    F = ON_NurbsSpanIndex (m_nurbs.m_order[1], m_nurbs.m_cv_count[1], m_nurbs.m_knot[1], p1, 0, 0);
 
-    ON_EvaluateNurbsBasis (m_nurbs.Order (0), m_nurbs.m_knot[0] + E, p(0), N0);
-    ON_EvaluateNurbsBasis (m_nurbs.Order (1), m_nurbs.m_knot[1] + F, p(1), N1);
+    ON_EvaluateNurbsBasis (m_nurbs.Order (0), m_nurbs.m_knot[0] + E, p0, N0);
+    ON_EvaluateNurbsBasis (m_nurbs.Order (1), m_nurbs.m_knot[1] + F, p1, N1);
 
     for (int i = 0; i < m_nurbs.Order (0); i++)
     {

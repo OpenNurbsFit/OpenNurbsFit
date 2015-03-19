@@ -43,46 +43,30 @@ namespace nurbsfit
 /** \brief Fitting a 1D NurbsSurface to 1D-data */
 class FitSurfaceDepth : public FitSurface
 {
-public:
-
-  struct ROI
-  {
-    double x, y, width, height;
-    ROI() : x(0), y(0), width(0), height(0) {}
-    ROI(double _x, double _y, double _w, double _h) : x(_x), y(_y), width(_w), height(_h) {}
-    ROI(const Eigen::MatrixXd &points);
-  };
-
 protected:
-  ROI m_roi;
-
   bool m_use_indices;
 
   void updateSurf();
 
 public:
-  FitSurfaceDepth(int order,
-                      int cps_width, int cps_height,
-                      ROI img_roi,
-                      const Eigen::MatrixXd& points);
-  FitSurfaceDepth(int order,
-                      int cps_width, int cps_height,
-                      ROI img_roi,
-                      const Eigen::MatrixXd& points,
-                      const std::vector<int>& indices);
+  FitSurfaceDepth(int order0, int order1,
+                  int cps0, int cps1,
+                  Domain roi,
+                  const Eigen::MatrixXd& points);
+  FitSurfaceDepth(int order0, int order1,
+                  int cps0, int cps1,
+                  Domain roi,
+                  const Eigen::MatrixXd& points,
+                  const std::vector<int>& indices);
   virtual ~FitSurfaceDepth();
 
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  void initSurface(int order0, int order1, int cps0, int cps1, Domain roi);
 
-  inline ON_NurbsSurface& getSurface ()
-  {
-    return m_nurbs;
-  }
-
-  void initSurface(int order, int cps_width, int cps_height, ROI img_roi);
-
-  virtual void initSolver(const Eigen::MatrixXd& points);
-  virtual void initSolver(const Eigen::MatrixXd& points, const std::vector<int>& indices);
+  virtual void initSolver(const Eigen::VectorXd& param0,
+                          const Eigen::VectorXd& param1);
+  virtual void initSolver(const Eigen::VectorXd& param0,
+                          const Eigen::VectorXd& param1,
+                          const std::vector<int>& indices);
 
   virtual void solve(const Eigen::VectorXd& z);
   virtual void solve(const Eigen::VectorXd& z, const std::vector<int>& indices);

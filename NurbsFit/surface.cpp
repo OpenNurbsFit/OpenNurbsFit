@@ -1,7 +1,39 @@
 
 #include "surface.h"
+#include <stdexcept>
 
 using namespace nurbsfit;
+
+FitSurface::Domain::Domain(const Eigen::VectorXd& param0, const Eigen::VectorXd& param1)
+{
+  if(param0.rows()!=param1.rows())
+    throw std::runtime_error("[FitSurface::Domain::Domain] Error, param vectors must be of same length.");
+
+  double x_min(DBL_MAX), x_max(DBL_MIN);
+  double y_min(DBL_MAX), y_max(DBL_MIN);
+
+  for(Eigen::MatrixXd::Index i=0; i<param0.rows(); i++)
+  {
+    const double& p0 = param0(i);
+    const double& p1 = param1(i);
+
+    if(p0<x_min)
+      x_min=p0;
+    if(p0>x_max)
+      x_max=p0;
+
+    if(p1<y_min)
+      y_min=p1;
+    if(p1>y_max)
+      y_max=p1;
+  }
+
+  x = x_min;
+  y = y_min;
+  width = x_max-x_min;
+  height = y_max-y_min;
+  border_offset = 0;
+}
 
 FitSurface::~FitSurface()
 {
