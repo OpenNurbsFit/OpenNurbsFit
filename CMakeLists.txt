@@ -30,10 +30,12 @@ include(suitesparse.cmake)
 include(openmp.cmake)
 
 set(LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/lib")
+SET(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/bin")
 
 add_subdirectory(OpenNurbs)
 add_subdirectory(NurbsFit)
-#add_subdirectory(apps)
+add_subdirectory(TomGine)
+add_subdirectory(apps)
 
 
 # OpenNurbsFitConfig.cmake
