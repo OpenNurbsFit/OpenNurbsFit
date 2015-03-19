@@ -1,7 +1,7 @@
 /*
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2015, Thomas Mörwald
+ *  Copyright (c) 2011, Thomas Mörwald, Jonathan Balzer, Inc.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -14,7 +14,7 @@
  *     copyright notice, this list of conditions and the following
  *     disclaimer in the documentation and/or other materials provided
  *     with the distribution.
- *   * Neither the name of the copyright holder(s) nor the names of its
+ *   * Neither the name of Thomas Mörwald or Jonathan Balzer nor the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -30,56 +30,36 @@
  *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
+ *
+ * @author thomas.moerwald
+ *
  */
 
-#ifndef NURBS_FIT_SURFACE_H
-#define NURBS_FIT_SURFACE_H
+#ifndef NURBS_FIT_TRIANGULATION_H
+#define NURBS_FIT_TRIANGULATION_H
 
 #include "OpenNurbs/opennurbs.h"
+#include "TomGine/tgModel.h"
 
-#undef Success
-#include <Eigen/SparseQR>
-#include <Eigen/SPQRSupport>
-
-namespace nurbsfit{
-
-class FitSurface
+namespace nurbsfit
 {
-public:
-  typedef Eigen::SparseMatrix<double> SparseMatrix;
-  typedef Eigen::SPQR<SparseMatrix> SPQR;
 
-  struct Domain
+  class Triangulation
   {
-    double x, y;
-    double width, height;
-    double border_offset;
+  public:
 
-    Domain() : x(0), y(0), width(1), height(1), border_offset(0) {}
+  public:
+    static void reverse(ON_NurbsCurve &curve, bool z_negative = true);
 
-    Domain(double _x, double _y, double _w, double _h, double _b=0.0)
-      : x(_x), y(_y), width(_w), height(_h), border_offset(_b) {}
+    static void flip(int dir, ON_NurbsSurface &nurbs);
 
-    Domain(const Eigen::VectorXd &param0, const Eigen::VectorXd &param1);
+    static void convertNurbs2tgModel(const ON_NurbsSurface &nurbs, TomGine::tgModel &model,
+                                     unsigned resU, unsigned resV, bool cps=false);
+
+
+
   };
-
-protected:
-  bool m_quiet;
-  ON_NurbsSurface m_nurbs;
-  Eigen::VectorXd m_b;  // control points
-  SparseMatrix m_K;     // matrix of linear system (containing basis functions of surface)
-  SPQR* m_solver;
-
-public:
-  FitSurface() : m_quiet(true), m_solver(NULL) {}
-  ~FitSurface();
-
-  inline const ON_NurbsSurface& getSurface() const { return m_nurbs; }
-
-};
-
-void IncreaseDimension( const ON_NurbsSurface& src, ON_NurbsSurface& dest, int dim );
 
 }
 
-#endif
+#endif // NURBS_FIT_TRIANGULATION_H

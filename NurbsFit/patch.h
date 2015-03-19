@@ -41,38 +41,30 @@ namespace nurbsfit
 {
 
 /** \brief Fitting a 1D NurbsSurface to 1D-data */
-class FitSurfaceDepth : public FitSurface
+class FitPatch : public FitSurface
 {
 protected:
-  bool m_use_indices;
-
   void updateSurf();
 
+  // global row/col index to global lexicographic index
+  int grc2gl (int I, int J) const { return m_nurbs.CVCount (1) * I + J; }
+  // local row/col index to global lexicographic index
+  int lrc2gl (int E, int F, int i, int j) const { return grc2gl (E + i, F + j); }
+  // global lexicographic in global row index
+  int gl2gr (int A) const { return (static_cast<int> (A / m_nurbs.CVCount (1))); }
+  // global lexicographic in global col index
+  int gl2gc (int A) const { return (static_cast<int> (A % m_nurbs.CVCount (1))); }
+
 public:
-  FitSurfaceDepth(int order0, int order1,
-                  int cps0, int cps1,
-                  Domain roi,
-                  const Eigen::MatrixXd& points);
-  FitSurfaceDepth(int order0, int order1,
-                  int cps0, int cps1,
-                  Domain roi,
-                  const Eigen::MatrixXd& points,
-                  const std::vector<int>& indices);
-  virtual ~FitSurfaceDepth();
 
-  void initSurface(int order0, int order1, int cps0, int cps1, Domain roi);
+  void initSurface(int dims, int order0, int order1, int cps0, int cps1, Domain roi);
 
-  virtual void initSolver(const Eigen::VectorXd& param0,
-                          const Eigen::VectorXd& param1);
-  virtual void initSolver(const Eigen::VectorXd& param0,
-                          const Eigen::VectorXd& param1,
-                          const std::vector<int>& indices);
+  void initSolver(const Eigen::VectorXd& param0, const Eigen::VectorXd& param1);
 
-  virtual void solve(const Eigen::VectorXd& z);
-  virtual void solve(const Eigen::VectorXd& z, const std::vector<int>& indices);
+  void solve(const Eigen::VectorXd& values);
 
-  Eigen::VectorXd GetError(const Eigen::VectorXd& z);
-  Eigen::VectorXd GetError(const Eigen::VectorXd& z, const std::vector<int>& indices);
+//  Eigen::VectorXd GetError(const Eigen::VectorXd& z);
+//  Eigen::VectorXd GetError(const Eigen::VectorXd& z, const std::vector<int>& indices);
 
 };
 

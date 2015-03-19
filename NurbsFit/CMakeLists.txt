@@ -16,15 +16,15 @@ endif()
 # source files
 set(SOURCE_CPP
     surface.cpp
-    surface_depth.cpp)
+    patch.cpp)
 
 set(SOURCE_H
     surface.h
-    surface_depth.h)
+    patch.h)
 
 # build
 add_library(nurbsfit SHARED ${SOURCE_CPP} ${SOURCE_H})
-target_link_libraries(nurbsfit opennurbs)
+target_link_libraries(nurbsfit opennurbs ${SUITESPARSE_LIBRARIES})
 
 # install
 install(FILES ${SOURCE_H} DESTINATION "${INSTALL_INCLUDE_DIR}/NurbsFit")
