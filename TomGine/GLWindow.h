@@ -52,7 +52,6 @@
 
 #endif
 
-/** @brief BLORT namespace for GLWindow */
 namespace TomGine {
 
 #ifdef WIN32

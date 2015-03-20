@@ -41,43 +41,49 @@
 #include <Eigen/SparseQR>
 #include <Eigen/SPQRSupport>
 
+/** @brief nurbsfit namespace */
 namespace nurbsfit{
 
+/** @brief Fitting a NURBS surface to data. */
 class FitSurface
 {
 public:
   typedef Eigen::SparseMatrix<double> SparseMatrix;
   typedef Eigen::SPQR<SparseMatrix> SPQR;
 
+  /** @brief Defines rectangular parametric domain of ON_NurbsSurface. */
   struct Domain
   {
-    double x, y;
-    double width, height;
-    double border_offset;
+    double x, y;          /// minimal point of domain
+    double width, height; /// range of domain
 
-    Domain() : x(0), y(0), width(1), height(1), border_offset(0) {}
+    Domain() : x(0), y(0), width(1), height(1) {}
 
-    Domain(double _x, double _y, double _w, double _h, double _b=0.0)
-      : x(_x), y(_y), width(_w), height(_h), border_offset(_b) {}
+    /// Direct construction.
+    Domain(double _x, double _y, double _w, double _h)
+      : x(_x), y(_y), width(_w), height(_h) {}
 
+    /// Construction of domain by bounding box of parametric positions of values (b).
     Domain(const Eigen::VectorXd &param0, const Eigen::VectorXd &param1);
   };
 
 protected:
-  bool m_quiet;
-  ON_NurbsSurface m_nurbs;
-  Eigen::VectorXd m_b;  // control points
-  SparseMatrix m_K;     // matrix of linear system (containing basis functions of surface)
-  SPQR* m_solver;
+  bool m_quiet;             /// suppress console output
+  ON_NurbsSurface m_nurbs;  /// surface fitted to data
+  Eigen::VectorXd m_x;      /// control points
+  SparseMatrix m_A;         /// matrix of linear system (containing basis functions of surface)
+  SPQR* m_solver;           /// solving for x:  A * x = b
 
 public:
   FitSurface() : m_quiet(true), m_solver(NULL) {}
   ~FitSurface();
 
+  /// Accessor to NURBS surface.
   inline const ON_NurbsSurface& getSurface() const { return m_nurbs; }
 
 };
 
+/** @brief Increase dimension of NURBS surface. */
 void IncreaseDimension( const ON_NurbsSurface& src, ON_NurbsSurface& dest, int dim );
 
 }

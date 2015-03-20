@@ -46,6 +46,7 @@
 #include "tgTimer.h"
 #include "tgTomGineThread.h"
 
+/** @brief TomGine namespace */
 namespace TomGine{
 
 static void cut_file_name(std::string full_file_name, std::string& file_name, std::string& path)

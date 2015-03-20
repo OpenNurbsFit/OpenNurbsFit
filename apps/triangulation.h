@@ -44,6 +44,7 @@
 namespace nurbsfit
 {
 
+  /** @brief Convertion of ON_NurbsSurface to TomGine::tgModel for visualization. */
   class Triangulation
   {
   public:

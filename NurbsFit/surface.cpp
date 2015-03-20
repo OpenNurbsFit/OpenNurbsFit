@@ -32,7 +32,6 @@ FitSurface::Domain::Domain(const Eigen::VectorXd& param0, const Eigen::VectorXd&
   y = y_min;
   width = x_max-x_min;
   height = y_max-y_min;
-  border_offset = 0;
 }
 
 FitSurface::~FitSurface()

@@ -68,8 +68,8 @@ void FitPatch::initSurface(int dims, int order0, int order1, int cps0, int cps1,
     m_nurbs.SetKnot (1, i, k + roi.y);
   }
 
-  m_b = Eigen::VectorXd(m_nurbs.CVCount()*dims,1);
-  m_b.setZero();
+  m_x = Eigen::VectorXd(m_nurbs.CVCount()*dims,1);
+  m_x.setZero();
   for (int i = 0; i < m_nurbs.CVCount(0); i++)
   {
     for (int j = 0; j < m_nurbs.CVCount(1); j++)
@@ -89,7 +89,7 @@ void FitPatch::initSolver(const Eigen::VectorXd& param0,
     throw std::runtime_error("[FitPatch::initSolver] Error, surface not initialized (initSurface).");
 
   int dim = m_nurbs.Dimension();
-  m_K = SparseMatrix( param0.rows()*dim, m_nurbs.CVCount()*dim );
+  m_A = SparseMatrix( param0.rows()*dim, m_nurbs.CVCount()*dim );
 
   typedef Eigen::Triplet<double> Tri;
   std::vector<Tri> tripletList;
@@ -132,11 +132,11 @@ void FitPatch::initSolver(const Eigen::VectorXd& param0,
   delete [] N1;
   delete [] N0;
 
-  m_K.setFromTriplets(tripletList.begin(), tripletList.end());
+  m_A.setFromTriplets(tripletList.begin(), tripletList.end());
 
   if(m_solver==NULL)
     m_solver = new SPQR();
-  m_solver->compute(m_K);
+  m_solver->compute(m_A);
   if(m_solver->info()!=Eigen::Success)
     throw std::runtime_error("[FitPatch::initSolver] decomposition failed.");
 
@@ -146,7 +146,7 @@ void FitPatch::initSolver(const Eigen::VectorXd& param0,
 
 void FitPatch::solve(const Eigen::VectorXd& values)
 {
-  m_b = m_solver->solve(values);
+  m_x = m_solver->solve(values);
 
   updateSurf();
 }
@@ -155,7 +155,7 @@ void FitPatch::updateSurf()
 {
   int ncp = m_nurbs.CVCount ();
 
-  if(m_b.rows()!=ncp*m_nurbs.Dimension())
+  if(m_x.rows()!=ncp*m_nurbs.Dimension())
     throw std::runtime_error("[FitPatch::updateSurf] Error, number of control points does not match.");
 
   for (int i = 0; i < ncp; i++)
@@ -164,22 +164,35 @@ void FitPatch::updateSurf()
 
     if(m_nurbs.Dimension()==1)
     {
-      cp.x = m_b(i);
+      cp.x = m_x(i);
     }
 
     if(m_nurbs.Dimension()==2)
     {
-      cp.x = m_b(2*i+0);
-      cp.y = m_b(2*i+1);
+      cp.x = m_x(2*i+0);
+      cp.y = m_x(2*i+1);
     }
 
     if(m_nurbs.Dimension()==3)
     {
-      cp.x = m_b(3*i+0);
-      cp.y = m_b(3*i+1);
-      cp.z = m_b(3*i+2);
+      cp.x = m_x(3*i+0);
+      cp.y = m_x(3*i+1);
+      cp.z = m_x(3*i+2);
     }
 
     m_nurbs.SetCV(gl2gr(i), gl2gc(i), cp);
   }
+}
+
+Eigen::VectorXd FitPatch::getError(const Eigen::VectorXd& values)
+{
+  // compute A*x (i.e. points on surface)
+  Eigen::VectorXd Ax(values.rows(),1);
+  Ax.setZero();
+  for (int k=0; k<m_A.outerSize(); ++k)
+  for (SparseMatrix::InnerIterator it(m_A,k); it; ++it)
+    Ax(it.row()) += it.value() * m_x(it.col());
+
+  // return (A*x-b)
+  return (Ax-values);
 }

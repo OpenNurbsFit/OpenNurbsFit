@@ -104,8 +104,8 @@ int main(int argc, char *argv[])
   // visualize
   ON_NurbsSurface nurbs = fit.getSurface();
   TomGine::tgRenderModel mesh;
-  mesh.SetColor(100,100,150);
-  Triangulation::convertNurbs2tgModel(nurbs,mesh);
+  mesh.SetColor(50,50,150);
+  Triangulation::convertNurbs2tgModel(nurbs,mesh, 64,64);
   viewer.AddModel3D(mesh);
 
 
