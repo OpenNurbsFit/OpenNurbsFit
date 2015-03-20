@@ -54,7 +54,7 @@ namespace nurbsfit
     static void flip(int dir, ON_NurbsSurface &nurbs);
 
     static void convertNurbs2tgModel(const ON_NurbsSurface &nurbs, TomGine::tgModel &model,
-                                     unsigned resU, unsigned resV, bool cps=false);
+                                     unsigned resU=16, unsigned resV=16, bool cps=false);
 
 
 

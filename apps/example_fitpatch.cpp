@@ -45,11 +45,15 @@ void CreateTent(Eigen::VectorXd& param0, Eigen::VectorXd& param1, Eigen::VectorX
   }
 }
 
-void Nurbs2Mesh(ON_NurbsSurface& nurbs, TomGine::tgModel& mesh,
-                FitSurface::Domain domain, int resX=32, int resY=32)
+void Nurbs2Mesh(ON_NurbsSurface& nurbs, TomGine::tgModel& mesh, int resX=32, int resY=32)
 {
+  double x0 = nurbs.Knot (0, 0);
+  double x1 = nurbs.Knot (0, nurbs.m_knot_capacity[0] - 1);
+  double y0 = nurbs.Knot (1, 0);
+  double y1 = nurbs.Knot (1, nurbs.m_knot_capacity[1] - 1);
+
   mesh.Clear();
-  tgShapeCreator::CreatePlaneXY(mesh, domain.x,domain.y,0, domain.width,domain.height, resX-1, resY-1);
+  tgShapeCreator::CreatePlaneXY(mesh, x0,y0,0, x1-x0,y1-y0, resX-1, resY-1);
 
   double z[nurbs.Dimension()];
   for(size_t i=0; i<mesh.m_vertices.size(); i++)
@@ -83,53 +87,27 @@ int main(int argc, char *argv[])
 
   // ###################### DIMENSION = 1 ######################
   // create data points
-  {
-    int dim(1);
-    Eigen::VectorXd param0, param1, values;
-    srand(0);
-    CreateTent(param0,param1,values, 1000, domain, dim);
+  int dim(1);
+  Eigen::VectorXd param0, param1, values;
+  srand(0);
+  CreateTent(param0,param1,values, 1000, domain, dim);
 
-//    for(int i=0; i<param0.rows(); i++)
-//      viewer.AddPoint3D(param0(i),param1(i),values(i,0));
+  for(int i=0; i<param0.rows(); i++)
+    viewer.AddPoint3D(param0(i),param1(i),values(i,0));
 
-    // fit nurbs surface
-    FitPatch fit;
-    fit.initSurface(dim, 3,3, 10,10, domain);
-    fit.initSolver(param0,param1);
-    fit.solve(values);
+  // fit nurbs surface
+  FitPatch fit;
+  fit.initSurface(dim, 3,3, 10,10, domain);
+  fit.initSolver(param0,param1);
+  fit.solve(values);
 
-    // visualize
-    ON_NurbsSurface nurbs = fit.getSurface();
-    TomGine::tgRenderModel mesh;
-    mesh.SetColor(200,50,50);
-    Nurbs2Mesh(nurbs,mesh,domain);
-    viewer.AddModel3D(mesh);
-  }
+  // visualize
+  ON_NurbsSurface nurbs = fit.getSurface();
+  TomGine::tgRenderModel mesh;
+  mesh.SetColor(100,100,150);
+  Triangulation::convertNurbs2tgModel(nurbs,mesh);
+  viewer.AddModel3D(mesh);
 
-  // ###################### DIMENSION = 3 ######################
-  // create data points
-  {
-    int dim(3);
-    Eigen::VectorXd param0, param1, values;
-    srand(0);
-    CreateTent(param0,param1,values, 1000, domain, dim);
-
-//    for(int i=0; i<param0.rows(); i++)
-//      viewer.AddPoint3D(param0(i),param1(i),values(i,0));
-
-    // fit nurbs surface
-    FitPatch fit;
-    fit.initSurface(dim, 3,3, 10,10, domain);
-    fit.initSolver(param0,param1);
-    fit.solve(values);
-
-    // visualize
-    ON_NurbsSurface nurbs = fit.getSurface();
-    TomGine::tgRenderModel mesh;
-    mesh.SetColor(50,50,200);
-    Nurbs2Mesh(nurbs,mesh,domain);
-    viewer.AddModel3D(mesh);
-  }
 
   viewer.Update();
   viewer.WaitForEvent(TomGine::TMGL_Press, TomGine::TMGL_Escape);

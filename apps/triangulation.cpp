@@ -37,6 +37,7 @@
 
 #include "triangulation.h"
 #include "TomGine/tgShapeCreator.h"
+#include <stdexcept>
 
 using namespace nurbsfit;
 
@@ -94,10 +95,7 @@ void Triangulation::convertNurbs2tgModel (const ON_NurbsSurface &nurbs, TomGine:
                                           unsigned resU, unsigned resV, bool cps)
 {
   if (nurbs.m_knot_capacity[0] <= 1 || nurbs.m_knot_capacity[1] <= 1)
-  {
-    printf ("[Triangulation::Convert] Warning: ON knot vector empty.\n");
-    return;
-  }
+    throw std::runtime_error("[Triangulation::convertNurbs2tgModel] Warning: ON knot vector empty.\n");
 
   model.Clear ();
 
@@ -109,30 +107,42 @@ void Triangulation::convertNurbs2tgModel (const ON_NurbsSurface &nurbs, TomGine:
   double h = y1 - y0;
 
   TomGine::tgShapeCreator::CreatePlaneXY (model, x0, y0, 0.0, w, h, resU, resV);
+  TomGine::vec3 tu, tv;
+  double pointAndTangents[9];
 
   for (unsigned i = 0; i < model.m_vertices.size (); i++)
   {
 
-    TomGine::tgVertex v = model.m_vertices[i];
+    TomGine::tgVertex& v = model.m_vertices[i];
 
-    double pointAndTangents[9];
-    nurbs.Evaluate (v.pos.x, v.pos.y, 1, 3, pointAndTangents);
+    if(nurbs.Dimension()==3)
+    {
+      nurbs.Evaluate (v.pos.x, v.pos.y, 1, nurbs.Dimension(), pointAndTangents);
 
-    TomGine::vec3 tu, tv;
-    model.m_vertices[i].pos.x = pointAndTangents[0];
-    model.m_vertices[i].pos.y = pointAndTangents[1];
-    model.m_vertices[i].pos.z = pointAndTangents[2];
+      v.pos.x = pointAndTangents[0];
+      v.pos.y = pointAndTangents[1];
+      v.pos.z = pointAndTangents[2];
 
-    tu.x = pointAndTangents[3]; // use tu
-    tu.y = pointAndTangents[4];
-    tu.z = pointAndTangents[5];
-    tv.x = pointAndTangents[6]; // use tv
-    tv.y = pointAndTangents[7];
-    tv.z = pointAndTangents[8];
+      tu.x = pointAndTangents[3]; // use tu
+      tu.y = pointAndTangents[4];
+      tu.z = pointAndTangents[5];
+      tv.x = pointAndTangents[6]; // use tv
+      tv.y = pointAndTangents[7];
+      tv.z = pointAndTangents[8];
 
-    model.m_vertices[i].normal = TomGine::normalize (TomGine::cross (tu, tv));
+      v.normal = TomGine::normalize(TomGine::cross (tu, tv));
+    }
 
+    if(nurbs.Dimension()==1)
+    {
+      nurbs.Evaluate (v.pos.x, v.pos.y, 0, nurbs.Dimension(), &pointAndTangents[0]);
+      v.pos.z = pointAndTangents[0];
+    }
   }
+
+  if(nurbs.Dimension()==1)
+    model.ComputeNormals();
+
 
   if (cps)
   {

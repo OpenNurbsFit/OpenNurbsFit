@@ -40,7 +40,7 @@
 namespace nurbsfit
 {
 
-/** \brief Fitting a 1D NurbsSurface to 1D-data */
+/** \brief Fitting a NURBS surface patch (clamped at borders) to data */
 class FitPatch : public FitSurface
 {
 protected:
