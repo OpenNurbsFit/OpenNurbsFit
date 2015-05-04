@@ -11,12 +11,12 @@ Modules:
 
 Dependencies:
   Required:
-  	- openNURBS SDK 5.0: Rhinoceros 3D openNURBS Initiative (www.rhino3d.com/opennurbs) 
+  	- openNURBS SDK 5.0: Rhinoceros 3D openNURBS Initiative (included) 
   	- Eigen 3.2.0: Template library for linear algebra (libeigen3-dev)
-    - SuiteSparse
+    - SuiteSparse (libsuitesparse-dev)
   Optional:
     - OpenMP: Open Multi-Processing library (www.openmp.com)
-    - TomGine 4.1: Visualization and rendering engine (http://users.acin.tuwien.ac.at/tmoerwald/?site=4)
+    - TomGine 4.1: Visualization and rendering engine (included)
  
 
-  * Note that apps require TomGine 4.1 for visualization (http://users.acin.tuwien.ac.at/tmoerwald/?site=4)
+  * Note that apps require TomGine 4.1 for visualization
