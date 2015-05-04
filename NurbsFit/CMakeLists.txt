@@ -5,6 +5,7 @@ else()
   find_package(PkgConfig REQUIRED)
   pkg_search_module(EIGEN3 REQUIRED eigen3)
   include_directories(${EIGEN3_INCLUDE_DIRS})
+  #message(STATUS "EIGEN3: ${EIGEN3_INCLUDE_DIRS}")
 endif()
 
 if(SUITESPARSE_FOUND)
@@ -15,10 +16,14 @@ endif()
 
 # source files
 set(SOURCE_CPP
+    curve.cpp
+    open_curve.cpp
     surface.cpp
     patch.cpp)
 
 set(SOURCE_H
+    curve.h
+    open_curve.h
     surface.h
     patch.h)
 

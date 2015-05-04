@@ -16,7 +16,10 @@ endif()
 # example_surface_depth
 add_executable(fit_patch example_fitpatch.cpp triangulation.h triangulation.cpp)
 target_link_libraries(fit_patch nurbsfit opennurbs tomgine)
+
+add_executable(fit_opencurve2d example_opencurve2d.cpp triangulation.h triangulation.cpp)
+target_link_libraries(fit_opencurve2d nurbsfit opennurbs tomgine)
  
-install(TARGETS fit_patch
+install(TARGETS fit_patch fit_opencurve2d
         EXPORT OpenNurbsFitTargets
         RUNTIME DESTINATION "${INSTALL_BIN_DIR}" COMPONENT bin)

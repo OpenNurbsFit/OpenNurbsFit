@@ -38,6 +38,9 @@
 #include "patch.h"
 #include <stdexcept>
 
+#undef Success
+#include <Eigen/Dense>
+
 using namespace nurbsfit;
 
 void FitPatch::initSurface(int dims, int order0, int order1, int cps0, int cps1, Domain roi)
@@ -74,13 +77,12 @@ void FitPatch::initSurface(int dims, int order0, int order1, int cps0, int cps1,
   {
     for (int j = 0; j < m_nurbs.CVCount(1); j++)
     {
-      m_nurbs.SetCV (i, j, ON_3dPoint(0,0,0));
+      m_nurbs.SetCV (i, j, ON_3dPoint(m_nurbs.Knot(0, i),m_nurbs.Knot(1, j),0));
     }
   }
 }
 
-void FitPatch::initSolver(const Eigen::VectorXd& param0,
-                                 const Eigen::VectorXd& param1)
+void FitPatch::initSolver(const Eigen::VectorXd& param0, const Eigen::VectorXd& param1)
 {
   if(param0.rows()!=param1.rows())
     throw std::runtime_error("[FitPatch::initSolver] Error, param vectors must be of same length.");
@@ -196,3 +198,253 @@ Eigen::VectorXd FitPatch::getError(const Eigen::VectorXd& values)
   // return (A*x-b)
   return (Ax-values);
 }
+
+Eigen::Vector2d FitPatch::reparameterize(const Eigen::VectorXd &value, const Eigen::Vector2d &hint,
+                                         int& steps, double &accuracy, int maxSteps, double minAccuracy)
+{
+  if(m_nurbs.CVCount() <= 0)
+    throw std::runtime_error("[FitPatch::reparameterize] Error, surface not initialized (initSurface).");
+
+  int nder = 1; // number of derivatives
+  int dims = m_nurbs.Dimension();
+  int nvals = dims*(nder+1)*(nder+2)/2;
+  double pointAndTangents[nvals];
+
+  Eigen::Vector2d current, delta, b, c;
+  Eigen::Matrix2d A, I;
+  Eigen::VectorXd p(dims), tu(dims), tv(dims), r(dims);
+  I = Eigen::Matrix2d::Identity();
+
+  double minU = m_nurbs.Knot(0,0);
+  double minV = m_nurbs.Knot(1,0);
+  double maxU = m_nurbs.Knot(0,m_nurbs.KnotCount(0)-1);
+  double maxV = m_nurbs.Knot(1,m_nurbs.KnotCount(1)-1);
+  double nu = 0.5;
+  double lambda = 1.0;
+  double accuracy_old(DBL_MAX);
+
+  current = hint;
+
+  for (steps = 0; steps < maxSteps; steps++)
+  {
+
+    m_nurbs.Evaluate (current(0), current(1), nder, dims, pointAndTangents);
+
+    if(dims==1)
+    {
+      p(0) = pointAndTangents[0];
+      tu(0) = pointAndTangents[1];
+      tv(0) = pointAndTangents[2];
+    }
+
+    if(dims==2)
+    {
+      p(0) = pointAndTangents[0];
+      p(1) = pointAndTangents[1];
+      tu(0) = pointAndTangents[2];
+      tu(1) = pointAndTangents[3];
+      tv(0) = pointAndTangents[4];
+      tv(1) = pointAndTangents[5];
+    }
+
+    if(dims==3)
+    {
+      p(0) = pointAndTangents[0];
+      p(1) = pointAndTangents[1];
+      p(2) = pointAndTangents[2];
+      tu(0) = pointAndTangents[3];
+      tu(1) = pointAndTangents[4];
+      tu(2) = pointAndTangents[5];
+      tv(0) = pointAndTangents[6];
+      tv(1) = pointAndTangents[7];
+      tv(2) = pointAndTangents[8];
+    }
+
+    r = p - value;
+
+    b(0) = -r.dot (tu);
+    b(1) = -r.dot (tv);
+
+    A(0, 0) = tu.dot (tu);
+    A(0, 1) = tu.dot (tv);
+    A(1, 0) = A (0, 1);
+    A(1, 1) = tv.dot (tv);
+
+    delta = A.ldlt().solve(b);
+
+    accuracy = delta.norm();
+    if (accuracy < minAccuracy)
+      return current;
+
+    // step width control (quite heuristic)
+    if(accuracy>accuracy_old*nu)
+      lambda *= nu;
+    accuracy_old = accuracy;
+
+    // make step
+    c = current + lambda * delta;
+
+    // clamp to domain borders
+    if (c(0) < minU)
+      c(0) = minU;
+    else if (c (0) > maxU)
+      c(0) = maxU;
+    if (c(1) < minV)
+      c(1) = minV;
+    else if (c(1) > maxV)
+      c(1) = maxV;
+
+    // compute real step
+    delta = c - current;
+    current = c;
+
+    accuracy = delta.norm();
+    if (accuracy < minAccuracy)
+      return current;
+  }
+
+  printf ("[FitPatch::reparameterize] Warning: Method did not converge (%e %e %d)\n",
+          accuracy, minAccuracy, maxSteps);
+  printf ("[FitPatch::reparameterize]   (0: %f %f) (1: %f %f) %f %f ... %f %f\n",
+          minU, maxU, minV, maxV,
+          hint (0), hint (1), current (0), current (1));
+
+  return current;
+}
+
+//#include <unsupported/Eigen/NumericalDiff>
+//#include <unsupported/Eigen/NonLinearOptimization>
+
+//struct SurfaceFunctor
+//{
+//  const Eigen::VectorXd& m_residuals;
+//  const ON_NurbsSurface& m_nurbs;
+
+//  SurfaceFunctor(const Eigen::VectorXd& residuals, const ON_NurbsSurface& nurbs)
+//    : m_residuals(residuals), m_nurbs(nurbs){}
+
+//  int operator()(const Eigen::VectorXd& x, Eigen::VectorXd& residuals) const
+//  {
+
+
+//    return 0;
+//  }
+
+//  int dx(const Eigen::VectorXd& x, Eigen::MatrixXd& jacobian)
+//  {
+
+//    return 0;
+//  }
+
+//  int inputs() const { return m_nurbs.CVCount(); }
+//  int values() const { return m_residuals.rows(); }
+//};
+
+//Eigen::Vector2d FitPatch::reparameterizeLM(const Eigen::VectorXd &value, const Eigen::Vector2d &hint,
+//                                         int& steps, double &accuracy, int maxSteps, double minAccuracy)
+//{
+//  if(m_nurbs.CVCount() <= 0)
+//    throw std::runtime_error("[FitPatch::reparameterize] Error, surface not initialized (initSurface).");
+
+//  int nder = 1; // number of derivatives
+//  int dims = m_nurbs.Dimension();
+//  int nvals = dims*(nder+1)*(nder+2)/2;
+//  double pointAndTangents[nvals];
+
+//  Eigen::Vector2d current, delta, b, c;
+//  Eigen::Matrix2d A, I;
+//  Eigen::VectorXd p(dims), tu(dims), tv(dims), r(dims);
+//  I = Eigen::Matrix2d::Identity();
+
+//  double minU = m_nurbs.Knot(0,0);
+//  double minV = m_nurbs.Knot(1,0);
+//  double maxU = m_nurbs.Knot(0,m_nurbs.KnotCount(0)-1);
+//  double maxV = m_nurbs.Knot(1,m_nurbs.KnotCount(1)-1);
+
+//  current = hint;
+
+//  SurfaceFunctor func;
+//  Eigen::LevenbergMarquardt<Eigen::NumericalDiff<my_functor>,double> lm(numDiff);
+
+//  for (steps = 0; steps < maxSteps; steps++)
+//  {
+
+//    m_nurbs.Evaluate (current(0), current(1), nder, dims, pointAndTangents);
+
+//    if(dims==1)
+//    {
+//      p(0) = pointAndTangents[0];
+//      tu(0) = pointAndTangents[1];
+//      tv(0) = pointAndTangents[2];
+//    }
+
+//    if(dims==2)
+//    {
+//      p(0) = pointAndTangents[0];
+//      p(1) = pointAndTangents[1];
+//      tu(0) = pointAndTangents[2];
+//      tu(1) = pointAndTangents[3];
+//      tv(0) = pointAndTangents[4];
+//      tv(1) = pointAndTangents[5];
+//    }
+
+//    if(dims==3)
+//    {
+//      p(0) = pointAndTangents[0];
+//      p(1) = pointAndTangents[1];
+//      p(2) = pointAndTangents[2];
+//      tu(0) = pointAndTangents[3];
+//      tu(1) = pointAndTangents[4];
+//      tu(2) = pointAndTangents[5];
+//      tv(0) = pointAndTangents[6];
+//      tv(1) = pointAndTangents[7];
+//      tv(2) = pointAndTangents[8];
+//    }
+
+//    r = p - value;
+
+//    b(0) = -r.dot (tu);
+//    b(1) = -r.dot (tv);
+
+//    A(0, 0) = tu.dot (tu);
+//    A(0, 1) = tu.dot (tv);
+//    A(1, 0) = A (0, 1);
+//    A(1, 1) = tv.dot (tv);
+
+//    delta = A.ldlt().solve(b);
+
+//    accuracy = delta.norm();
+//    if (accuracy < minAccuracy)
+//      return current;
+
+//    // make step
+//    c = current + delta;
+
+//    // clamp to domain borders
+//    if (c(0) < minU)
+//      c(0) = minU;
+//    else if (c (0) > maxU)
+//      c(0) = maxU;
+//    if (c(1) < minV)
+//      c(1) = minV;
+//    else if (c(1) > maxV)
+//      c(1) = maxV;
+
+//    // compute real step
+//    delta = c - current;
+//    current = c;
+
+//    accuracy = delta.norm();
+//    if (accuracy < minAccuracy)
+//      return current;
+//  }
+
+//  printf ("[FitPatch::reparameterize] Warning: Method did not converge (%e %e %d)\n",
+//          accuracy, minAccuracy, maxSteps);
+//  printf ("[FitPatch::reparameterize]   (0: %f %f) (1: %f %f) %f %f ... %f %f\n",
+//          minU, maxU, minV, maxV,
+//          hint (0), hint (1), current (0), current (1));
+
+//  return current;
+//}
+

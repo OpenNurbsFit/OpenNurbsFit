@@ -87,13 +87,13 @@ int main(int argc, char *argv[])
 
   // ###################### DIMENSION = 1 ######################
   // create data points
-  int dim(1);
+  int dim(3);
   Eigen::VectorXd param0, param1, values;
   srand(0);
   CreateTent(param0,param1,values, 1000, domain, dim);
 
   for(int i=0; i<param0.rows(); i++)
-    viewer.AddPoint3D(param0(i),param1(i),values(i,0));
+    viewer.AddPoint3D(values(3*i+0),values(3*i+1),values(3*i+2));
 
   // fit nurbs surface
   FitPatch fit;
@@ -105,6 +105,41 @@ int main(int argc, char *argv[])
   ON_NurbsSurface nurbs = fit.getSurface();
   TomGine::tgRenderModel mesh;
   mesh.SetColor(50,50,150);
+  Triangulation::convertNurbs2tgModel(nurbs,mesh, 64,64);
+  viewer.AddModel3D(mesh);
+
+  viewer.Update();
+  viewer.WaitForEvent(TomGine::TMGL_Press, TomGine::TMGL_Space);
+
+  for(size_t j=0; j<100; j++)
+  {
+    Eigen::Vector2d param;
+    Eigen::VectorXd value(dim);
+    int iter(0), k;
+    double accuracy(0.0), a;
+    for(unsigned i=0; i<param0.rows(); i++)
+    {
+      value(0) = values(dim*i + 0);
+      value(1) = values(dim*i + 1);
+      value(2) = values(dim*i + 2);
+      param = fit.reparameterize(value, Eigen::Vector2d(param0(i),param1(i)), k, a, 100, 1e-6);
+      iter += k;
+      accuracy += a;
+      param0(i) = param(0);
+      param1(i) = param(1);
+    }
+    printf("steps: %d  accuracy: %f\n", iter, accuracy);
+    fit.initSolver(param0,param1);
+    fit.solve(values);
+
+    if(accuracy<1e-4)
+      break;
+
+  }
+
+  // visualize
+  nurbs = fit.getSurface();
+  mesh.SetColor(150,50,50);
   Triangulation::convertNurbs2tgModel(nurbs,mesh, 64,64);
   viewer.AddModel3D(mesh);
 

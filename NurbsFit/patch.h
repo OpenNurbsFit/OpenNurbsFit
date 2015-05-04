@@ -86,6 +86,13 @@ public:
    */
   Eigen::VectorXd getError(const Eigen::VectorXd& values);
 
+
+  Eigen::Vector2d reparameterize(const Eigen::VectorXd &value, const Eigen::Vector2d &hint,
+                                 int& steps, double& accuracy, int maxSteps, double minAccuracy);
+
+  Eigen::Vector2d reparameterizeLM(const Eigen::VectorXd &value, const Eigen::Vector2d &hint,
+                                   int& steps, double& accuracy, int maxSteps, double minAccuracy);
+
 };
 
 }
