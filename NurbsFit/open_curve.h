@@ -50,13 +50,13 @@ public:
    *  @param[in] dims Dimension of NURBS surface (ie. control points).
    *  @param[in] order Polynomial order
    *  @param[in] cps Number of control points
-   *  @param[in] domain The domain of the NURBS curve.
+   *  @param[in] domain The domain range of the NURBS curve.
    *  @see FitCurve::Domain
    */
   void initCurve(int dims, int order, int cps, Domain range);
 
-  /** Initialize the solver. Assembly of matrix K and QR decomposition. Requires NURBS curve to be initialized.
-   *  @param[in] param Vector of parametric positions
+  /** Initialize the solver. Assembly of matrix A and QR decomposition. Requires NURBS curve to be initialized.
+   *  @param[in] param Vector of parametric positions, corresponding to values
    */
   void initSolver(const Eigen::VectorXd& param);
 

@@ -125,6 +125,19 @@ void FitOpenCurve::solve(const Eigen::VectorXd& values)
   updateCurve();
 }
 
+Eigen::VectorXd FitOpenCurve::getError(const Eigen::VectorXd& values)
+{
+  // compute A*x (i.e. points on curve)
+  Eigen::VectorXd Ax(values.rows(),1);
+  Ax.setZero();
+  for (int k=0; k<m_A.outerSize(); ++k)
+  for (SparseMatrix::InnerIterator it(m_A,k); it; ++it)
+    Ax(it.row()) += it.value() * m_x(it.col());
+
+  // return (A*x-b)
+  return (Ax-values);
+}
+
 void FitOpenCurve::updateCurve()
 {
   int ncp = m_nurbs.CVCount();

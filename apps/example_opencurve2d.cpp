@@ -5,38 +5,42 @@
 using namespace TomGine;
 using namespace nurbsfit;
 
-TomGine::tgTomGineThread viewer(800,600, "Example FitSurfaceDepth");
+TomGine::tgTomGineThread viewer(800,600, "Example: Fit Open Curve 2D");
 
-void CreateSine(Eigen::VectorXd& params, Eigen::VectorXd& values,
-                int dims, int num_samples, double k=1.0, double a=1.0, double b=1.0)
+// create data points for curve fitting
+void CreateSine(Eigen::VectorXd& params, Eigen::VectorXd& points,
+                int dims, int num_points, double k=1.0, double a=1.0, double b=1.0)
 {
-  params.resize(num_samples);
-  values.resize(num_samples*dims);
+  params.resize(num_points);
+  points.resize(num_points*dims);
 
-  for(int i=0; i<num_samples; i++)
+  for(int i=0; i<num_points; i++)
   {
-    double x = double(i) / (num_samples - 1);
+    double x = double(i) / (num_points - 1);
     double y = x * 2.0 * M_PI;
     params(i) = x;
 
     if(dims==1)
     {
-      values(i) = sin(y);
+      points(i) = a * sin(k*y);
     }
+
     if(dims==2)
     {
-      values(i*dims) = x;
-      values(i*dims+1) = a * sin(k*y);
+      points(i*dims) = x;
+      points(i*dims+1) = a * sin(k*y);
     }
+
     if(dims==3)
     {
-      values(i*dims) = x;
-      values(i*dims+1) = a * sin(k*y);
-      values(i*dims+2) = b * cos(k*y);
+      points(i*dims) = x;
+      points(i*dims+1) = a * sin(k*y);
+      points(i*dims+2) = b * cos(k*y);
     }
   }
 }
 
+// Converts a B-spline curve to a mesh model
 void Nurbs2Mesh(ON_NurbsCurve& nurbs, TomGine::tgModel& mesh, int res=256)
 {
   double x0 = nurbs.Knot (0);
@@ -75,17 +79,32 @@ void Nurbs2Mesh(ON_NurbsCurve& nurbs, TomGine::tgModel& mesh, int res=256)
     if(nurbs.Dimension()==1)
     {
       line.start.x = param0;  line.end.x = param1;
-      line.start.y = z0[1];   line.end.y = z1[1];
+      line.start.y = z0[0];   line.end.y = z1[0];
       line.start.z = 0.0;     line.end.z = 0.0;
     }
 
   }
 
-  for(int i=0; i<nurbs.CVCount(); i++)
+  if(nurbs.Dimension()==1)
   {
-    ON_3dPoint cp;
-    nurbs.GetCV(i,cp);
-    mesh.m_points.push_back(vec3(cp.x,cp.y,cp.z));
+    double gx[nurbs.CVCount()];
+    nurbs.GetGrevilleAbcissae(gx);
+
+    for(int i=0; i<nurbs.CVCount(); i++)
+    {
+      ON_3dPoint cp;
+      nurbs.GetCV(i,cp);
+      mesh.m_points.push_back(vec3(gx[i],cp.x,0.0));
+    }
+
+  }else{
+
+    for(int i=0; i<nurbs.CVCount(); i++)
+    {
+      ON_3dPoint cp;
+      nurbs.GetCV(i,cp);
+      mesh.m_points.push_back(vec3(cp.x,cp.y,cp.z));
+    }
   }
   mesh.m_point_size = 10.0f;
 
@@ -93,35 +112,42 @@ void Nurbs2Mesh(ON_NurbsCurve& nurbs, TomGine::tgModel& mesh, int res=256)
 
 int main(int argc, char *argv[])
 {
-  Eigen::VectorXd params;
-  Eigen::VectorXd values;
-  int num_samples = 1000;
-  int dims = 2;
-  int cps = 20;
-  int order = 3;
-  CreateSine(params, values, dims, num_samples, 2.0, 0.25, 0.25);
+  int num_points = 100; // number of data points
+  int dims = 3;         // dimension of points & B-spline curve
+  int cps = 10;         // number of control points
+  int order = 4;        // polynomial order of B-spline curve
 
-  for(Eigen::VectorXd::Index i=0; i<num_samples; i++)
+  Eigen::VectorXd params; // parameter values in B-spline domain, corresponding to points
+  Eigen::VectorXd points; // data points B-spline is fitted to (params.size * dims == points.size)
+
+  // create parameters and data points
+  CreateSine(params, points, dims, num_points, 2.0, 0.25, 0.25);
+
+  for(Eigen::VectorXd::Index i=0; i<num_points; i++)
   {
+    if(dims==1)
+      viewer.AddPoint3D(params(i), points(i), 0, 255,255,255, 5.0f);
+
     if(dims==2)
-      viewer.AddPoint3D(values(i*dims), values(i*dims+1), 0, 255,255,255, 5.0f);
+      viewer.AddPoint3D(points(i*dims), points(i*dims+1), 0, 255,255,255, 5.0f);
 
     if(dims==3)
-      viewer.AddPoint3D(values(i*dims), values(i*dims+1), values(i*dims+2), 255,255,255, 5.0f);
+      viewer.AddPoint3D(points(i*dims), points(i*dims+1), points(i*dims+2), 255,255,255, 5.0f);
   }
 
+  // fit an open B-spline curve
   FitOpenCurve::Domain range(0,1);
   FitOpenCurve fit;
   fit.setQuiet(false);
   fit.initCurve(dims, order, cps, range);
   fit.initSolver(params);
-  fit.solve(values);
+  fit.solve(points);
 
+  // visualize
   ON_NurbsCurve nurbs = fit.getCurve();
   tgModel mesh;
   Nurbs2Mesh(nurbs, mesh);
   mesh.m_line_width = 3.0f;
-
   viewer.AddModel3D(mesh);
 
 
