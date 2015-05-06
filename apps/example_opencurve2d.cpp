@@ -113,9 +113,10 @@ void Nurbs2Mesh(ON_NurbsCurve& nurbs, TomGine::tgModel& mesh, int res=256)
 int main(int argc, char *argv[])
 {
   int num_points = 100; // number of data points
-  int dims = 3;         // dimension of points & B-spline curve
+  int dims = 2;         // dimension of points & B-spline curve
   int cps = 10;         // number of control points
   int order = 4;        // polynomial order of B-spline curve
+  bool clamp = false;   // clamp curve at ends, or leave them open
 
   Eigen::VectorXd params; // parameter values in B-spline domain, corresponding to points
   Eigen::VectorXd points; // data points B-spline is fitted to (params.size * dims == points.size)
@@ -139,15 +140,20 @@ int main(int argc, char *argv[])
   FitOpenCurve::Domain range(0,1);
   FitOpenCurve fit;
   fit.setQuiet(false);
-  fit.initCurve(dims, order, cps, range);
+  fit.initCurve(dims, order, cps, range, clamp);
   fit.initSolver(params);
   fit.solve(points);
 
   // visualize
   ON_NurbsCurve nurbs = fit.getCurve();
+
+  ON_TextLog out;
+  nurbs.Dump(out);
+
   tgModel mesh;
   Nurbs2Mesh(nurbs, mesh);
   mesh.m_line_width = 3.0f;
+  mesh.m_point_color = vec3(0,1,0);
   viewer.AddModel3D(mesh);
 
 

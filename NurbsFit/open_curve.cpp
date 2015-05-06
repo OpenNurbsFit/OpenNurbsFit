@@ -40,19 +40,28 @@
 
 using namespace nurbsfit;
 
-void FitOpenCurve::initCurve(int dims, int order, int cps, Domain range)
+void FitOpenCurve::initCurve(int dims, int order, int cps, Domain range, bool clamped)
 {
   if(cps<order)
     cps = order;
 
   m_nurbs = ON_NurbsCurve(dims, false, order, cps);
 
-  double dd = range.width() / (m_nurbs.KnotCount() - 2*(order-2) - 1);
+  unsigned cp_red = 2*(order-2);
+  double dd = range.width() / (m_nurbs.KnotCount() - cp_red - 1);
 
-  m_nurbs.MakeClampedUniformKnotVector(dd);
+  if(clamped)
+  {
+    m_nurbs.MakeClampedUniformKnotVector(dd);
+    for (int i = 0; i < m_nurbs.KnotCount(); i++)
+      m_nurbs.SetKnot (i, range.start + m_nurbs.Knot(i));
+  }else
+  {
+    double doff = dd * (cp_red>>1);
+    for (int i = 0; i < m_nurbs.KnotCount(); i++)
+      m_nurbs.SetKnot (i, range.start + i*dd - doff);
+  }
 
-  for (int i = 0; i < m_nurbs.KnotCount(); i++)
-    m_nurbs.SetKnot (i, m_nurbs.Knot(i) + range.start);
 
   m_x = Eigen::VectorXd(m_nurbs.CVCount()*dims,1);
   m_x.setZero();

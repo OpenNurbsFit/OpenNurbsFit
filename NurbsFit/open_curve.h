@@ -51,9 +51,10 @@ public:
    *  @param[in] order Polynomial order
    *  @param[in] cps Number of control points
    *  @param[in] domain The domain range of the NURBS curve.
+   *  @param[in] clamped true creates terminating curve ends (mulitple knots), false leaves them open (uniform knots)
    *  @see FitCurve::Domain
    */
-  void initCurve(int dims, int order, int cps, Domain range);
+  void initCurve(int dims, int order, int cps, Domain range, bool clamped=true);
 
   /** Initialize the solver. Assembly of matrix A and QR decomposition. Requires NURBS curve to be initialized.
    *  @param[in] param Vector of parametric positions, corresponding to values

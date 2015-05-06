@@ -312,6 +312,26 @@ Eigen::Vector2d FitPatch::reparameterize(const Eigen::VectorXd &value, const Eig
   return current;
 }
 
+//int nvals = nurbs.m_dim*(nder+1)*(nder+2)/2;
+//double P[nvals];
+//nurbs.Evaluate (u, v, nder, nurbs.m_dim, P);
+
+//// positions
+//xx = P[0];    xy = P[1];    xz = P[2];
+
+//// 1st derivatives (for normals)
+//xu(0) = P[3];    xu(1) = P[4];    xu(2) = P[5];
+//xv(0) = P[6];    xv(1) = P[7];    xv(2) = P[8];
+
+//n = xu.cross(xv);
+//n.normalize();
+//v.normal = TomGine::vec3(n(0),n(1),n(2));
+
+//// 2nd derivatives (for curvature)
+//xuu(0) = P[9];     xuu(1) = P[10];    xuu(2) = P[11];
+//xuv(0) = P[12];    xuv(1) = P[13];    xuv(2) = P[14];
+//xvv(0) = P[15];    xvv(1) = P[16];    xvv(2) = P[17];
+
 //#include <unsupported/Eigen/NumericalDiff>
 //#include <unsupported/Eigen/NonLinearOptimization>
 
